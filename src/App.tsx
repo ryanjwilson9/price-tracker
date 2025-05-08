@@ -70,7 +70,7 @@ function App() {
       let priceArr = chartRes.data.prices.map((p: number[]) => p[1])
       if (priceArr.length > timeframe.value.points) {
         const step = Math.floor(priceArr.length / timeframe.value.points)
-        priceArr = priceArr.filter((_, i: number) => i % step === 0)
+        priceArr = priceArr.filter((_:unknown, i: number) => i % step === 0)
       }
       setPrices(priceArr)
     } catch (err) {
