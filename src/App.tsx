@@ -16,11 +16,11 @@ const COINS = [
 ]
 
 const TIMEFRAMES = [
-  { label: '1H', value: { days: 1, interval: 'minutely', points: 60 } },
-  { label: '1D', value: { days: 1, interval: 'hourly', points: 24 } },
-  { label: '5D', value: { days: 5, interval: 'hourly', points: 120 } },
-  { label: '7D', value: { days: 7, interval: 'hourly', points: 168 } },
+  { label: '1W', value: { days: 7, interval: 'daily', points: 7 } },
   { label: '1M', value: { days: 30, interval: 'daily', points: 30 } },
+  { label: '6M', value: { days: 180, interval: 'daily', points: 180 } },
+  { label: '1Y', value: { days: 365, interval: 'daily', points: 365 } },
+  { label: '5Y', value: { days: 1825, interval: 'daily', points: 1825 } },
 ]
 
 interface CryptoData {
@@ -39,9 +39,11 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [prices, setPrices] = useState<number[]>([])
-  const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[1]) // Default 1D
+  const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[1]) // Default 1M
   const [darkMode, setDarkMode] = useState(true)
   const [selectedCoin, setSelectedCoin] = useState(COINS[0])
+  const API_KEY = 'CG-HrbZesQHPwm6fmZD6kmJTqse'
+  const BASE_URL = 'https://api.coingecko.com/api/v3'
 
   useEffect(() => {
     if (darkMode) {
@@ -52,27 +54,160 @@ function App() {
   }, [darkMode])
 
   useEffect(() => {
-    fetchCryptoData(selectedCoin.id, selectedTimeframe)
-    // eslint-disable-next-line
+    // Check API status first
+    const checkApiStatus = async () => {
+      try {
+        console.log('Checking CoinGecko API status...')
+        const response = await fetchWithRetry(
+          `${BASE_URL}/ping`,
+          {}
+        )
+        console.log('CoinGecko API status:', response.data)
+        return true
+      } catch (error) {
+        console.error('CoinGecko API status check failed:', error)
+        setError('CoinGecko API appears to be unavailable. Please try again later.')
+        return false
+      }
+    }
+
+    checkApiStatus().then(isAvailable => {
+      if (isAvailable) {
+        fetchCryptoData(selectedCoin.id, selectedTimeframe)
+      }
+    })
+  }, []) // Run only on mount
+
+  useEffect(() => {
+    const delay = 1000 // 1 second delay between API calls
+    const timeoutId = setTimeout(() => {
+      fetchCryptoData(selectedCoin.id, selectedTimeframe)
+    }, delay)
+    return () => clearTimeout(timeoutId)
   }, [selectedCoin, selectedTimeframe])
 
-  const fetchCryptoData = async (coinId: string, timeframe = selectedTimeframe) => {
+  const fetchWithRetry = async (url: string, options: any, retries = 3, delay = 2000) => {
+    try {
+      // Add API key as a header instead of URL parameter
+      const headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'x-cg-demo-api-key': API_KEY
+      }
+      
+      console.log(`Attempting request to: ${url}`)
+      
+      const response = await axios.get(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          ...headers
+        },
+        timeout: 10000,
+      })
+      
+      console.log(`Success response from ${url}:`, {
+        status: response.status,
+        headers: response.headers,
+        data: response.data ? 'Data received' : 'No data'
+      })
+      return response
+    } catch (error: any) {
+      console.error(`Error in fetchWithRetry for ${url}:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        code: error.code
+      })
+      
+      if (retries > 0) {
+        if (error.response?.status === 429) {
+          const retryAfter = parseInt(error.response?.headers['retry-after']) || delay / 1000
+          const retryDelay = retryAfter * 1000
+          console.log(`Rate limited, retrying in ${retryDelay}ms. Retries left: ${retries}`)
+          await new Promise(resolve => setTimeout(resolve, retryDelay))
+          return fetchWithRetry(url, options, retries - 1, delay * 2)
+        } else if (error.response?.status === 401 || error.response?.status === 403) {
+          throw new Error('Authentication failed. Please check your CoinGecko API key.')
+        } else if (error.code === 'ECONNABORTED' || !error.response) {
+          console.log(`Request failed, retrying in ${delay}ms. Retries left: ${retries}`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+          return fetchWithRetry(url, options, retries - 1, delay * 2)
+        }
+      }
+      throw error
+    }
+  }
+
+  const fetchCryptoData = async (coinId: string, timeframe: typeof TIMEFRAMES[0]) => {
     try {
       setLoading(true)
       setError('')
-      const [coinRes, chartRes] = await Promise.all([
-        axios.get(`https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false`),
-        axios.get(`https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${timeframe.value.days}&interval=${timeframe.value.interval}`)
-      ])
-      setCryptoData(coinRes.data)
-      let priceArr = chartRes.data.prices.map((p: number[]) => p[1])
-      if (priceArr.length > timeframe.value.points) {
-        const step = Math.floor(priceArr.length / timeframe.value.points)
-        priceArr = priceArr.filter((_: unknown, i: number) => i % step === 0)
+      console.log('Starting fetchCryptoData with:', { coinId, timeframe })
+
+      // First API call - Get coin data
+      const coinRes = await fetchWithRetry(
+        `${BASE_URL}/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false`,
+        {}
+      )
+
+      // Wait 2 seconds between requests to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      // Second API call - Get chart data
+      const chartRes = await fetchWithRetry(
+        `${BASE_URL}/coins/${coinId}/market_chart?vs_currency=usd&days=${timeframe.value.days}&interval=${timeframe.value.interval}`,
+        {}
+      )
+
+      if (!coinRes.data || !chartRes.data) {
+        console.error('Invalid API response:', {
+          coinResData: !!coinRes.data,
+          chartResData: !!chartRes.data
+        })
+        throw new Error('Invalid response from CoinGecko API')
       }
-      setPrices(priceArr)
-    } catch (err) {
-      setError('Failed to fetch cryptocurrency data. Please try again later.')
+
+      console.log('Successfully fetched data:', {
+        coin: coinRes.data.symbol,
+        currentPrice: coinRes.data.market_data?.current_price?.usd,
+        priceDataPoints: chartRes.data.prices?.length
+      })
+
+      setCryptoData(coinRes.data)
+      
+      // Process price data
+      if (chartRes.data.prices?.length > 0) {
+        let priceArr = chartRes.data.prices.map((p: number[]) => p[1])
+        if (priceArr.length > timeframe.value.points) {
+          const step = Math.floor(priceArr.length / timeframe.value.points)
+          priceArr = priceArr.filter((_: unknown, i: number) => i % step === 0)
+        }
+        setPrices(priceArr)
+      } else {
+        setPrices([])
+      }
+    } catch (err: any) {
+      console.error('Detailed API Error:', {
+        response: err.response,
+        message: err.message,
+        code: err.code
+      })
+
+      let errorMessage = 'Failed to fetch cryptocurrency data. '
+      
+      if (err.response?.status === 429) {
+        errorMessage += 'Rate limit exceeded. Please wait a moment and try again.'
+      } else if (err.response?.status === 401 || err.response?.status === 403) {
+        errorMessage += 'Authentication failed. Please check your CoinGecko API key.'
+      } else if (err.response?.data?.error) {
+        errorMessage += err.response.data.error
+      } else if (err.message) {
+        errorMessage += `Error: ${err.message}`
+      }
+      
+      setError(errorMessage)
       setCryptoData(null)
       setPrices([])
     } finally {
@@ -126,6 +261,7 @@ function App() {
             </button>
           ))}
         </div>
+
         {/* Interval Buttons */}
         <div className="flex justify-center gap-2 mb-6 flex-wrap w-full max-w-lg">
           {TIMEFRAMES.map((tf) => (
@@ -138,12 +274,18 @@ function App() {
             </button>
           ))}
         </div>
+
         {error && (
           <div className="p-4 mb-4 text-red-700 bg-red-100 dark:bg-red-900/60 rounded-lg text-center font-semibold max-w-lg w-full">
             {error}
           </div>
         )}
-        {cryptoData && (
+
+        {loading ? (
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : cryptoData && (
           <div className="bg-white/90 dark:bg-gray-800/90 rounded-2xl shadow-2xl p-8 flex flex-col items-center w-full max-w-lg backdrop-blur-lg border border-gray-200 dark:border-gray-700">
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2 tracking-wide">{cryptoData.symbol.toUpperCase()}</h2>
             <p className="text-4xl font-extrabold text-gray-900 dark:text-white mb-2">${cryptoData.market_data.current_price.usd.toLocaleString()}</p>
@@ -169,4 +311,4 @@ function App() {
   )
 }
 
-export default App
+export default App 
