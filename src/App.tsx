@@ -226,87 +226,97 @@ function App() {
   const toggleDarkMode = () => setDarkMode((prev) => !prev)
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-gray-100 dark:bg-gray-900 font-sans transition-colors duration-300">
-      {/* Header */}
-      <header className="w-full py-4 px-4 flex justify-between items-center bg-white/90 dark:bg-gray-900/90 shadow-md sticky top-0 z-10 backdrop-blur">
-        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">Crypto Price Tracker</h1>
-        <button
-          onClick={toggleDarkMode}
-          className="ml-4 p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
-          aria-label="Toggle dark mode"
-        >
-          {darkMode ? (
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-yellow-400">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1.5m0 15V21m8.485-8.485h-1.5m-15 0H3m15.364-6.364l-1.06 1.06m-12.728 0l-1.06-1.06m12.728 12.728l-1.06-1.06m-12.728 0l-1.06 1.06M16.24 7.76A6.5 6.5 0 117.76 16.24 6.5 6.5 0 0116.24 7.76z" />
-            </svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-400">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0112 21.75c-5.385 0-9.75-4.365-9.75-9.75 0-4.136 2.635-7.64 6.248-9.002a.75.75 0 01.977.73v.342c0 4.28 3.463 7.75 7.75 7.75h.342a.75.75 0 01.73.977z" />
-            </svg>
-          )}
-        </button>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-2 py-8">
-        {/* Ticker Buttons */}
-        <div className="flex flex-wrap justify-center gap-3 mb-6 w-full max-w-lg">
-          {COINS.map((coin) => (
-            <button
-              key={coin.symbol}
-              onClick={() => handleCoinClick(coin)}
-              className={`px-4 py-2 rounded-lg font-bold border transition-colors duration-150 text-sm md:text-base shadow-sm ${selectedCoin.symbol === coin.symbol ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-300 border-blue-300 dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-gray-600'}`}
-            >
-              {coin.symbol}
-            </button>
-          ))}
-        </div>
-
-        {/* Interval Buttons */}
-        <div className="flex justify-center gap-2 mb-6 flex-wrap w-full max-w-lg">
-          {TIMEFRAMES.map((tf) => (
-            <button
-              key={tf.label}
-              onClick={() => handleTimeframeChange(tf)}
-              className={`px-3 py-1 rounded-full text-sm font-semibold border transition-colors duration-150 ${selectedTimeframe.label === tf.label ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-300 border-blue-300 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700'}`}
-            >
-              {tf.label}
-            </button>
-          ))}
-        </div>
-
-        {error && (
-          <div className="p-4 mb-4 text-red-700 bg-red-100 dark:bg-red-900/60 rounded-lg text-center font-semibold max-w-lg w-full">
-            {error}
-          </div>
-        )}
-
-        {loading ? (
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        ) : cryptoData && (
-          <div className="bg-white/90 dark:bg-gray-800/90 rounded-2xl shadow-2xl p-8 flex flex-col items-center w-full max-w-lg backdrop-blur-lg border border-gray-200 dark:border-gray-700">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2 tracking-wide">{cryptoData.symbol.toUpperCase()}</h2>
-            <p className="text-4xl font-extrabold text-gray-900 dark:text-white mb-2">${cryptoData.market_data.current_price.usd.toLocaleString()}</p>
-            <p className={`text-lg font-semibold mb-4 ${cryptoData.market_data.price_change_percentage_24h >= 0 ? 'text-green-500' : 'text-red-400'}`}>
-              24h Change: {cryptoData.market_data.price_change_percentage_24h.toFixed(2)}%
-            </p>
-            {prices.length > 0 && (
-              <div className="w-full h-32">
-                <Sparklines data={prices} width={400} height={100} margin={5}>
-                  <SparklinesLine color="#2563eb" style={{ fill: 'none' }} />
-                </Sparklines>
-              </div>
+    <div className="min-h-screen flex flex-col justify-between app-background font-sans">
+      <div className="overlay w-full h-full min-h-screen flex flex-col">
+        {/* Header */}
+        <header className="w-full py-4 px-4 flex justify-between items-center bg-black/20 shadow-md sticky top-0 z-10 backdrop-blur">
+          <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">Crypto Price Tracker</h1>
+          <button
+            onClick={toggleDarkMode}
+            className="ml-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors border border-white/20"
+            aria-label="Toggle dark mode"
+          >
+            {darkMode ? (
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-yellow-400">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1.5m0 15V21m8.485-8.485h-1.5m-15 0H3m15.364-6.364l-1.06 1.06m-12.728 0l-1.06-1.06m12.728 12.728l-1.06-1.06m-12.728 0l-1.06 1.06M16.24 7.76A6.5 6.5 0 117.76 16.24 6.5 6.5 0 0116.24 7.76z" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-white">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0112 21.75c-5.385 0-9.75-4.365-9.75-9.75 0-4.136 2.635-7.64 6.248-9.002a.75.75 0 01.977.73v.342c0 4.28 3.463 7.75 7.75 7.75h.342a.75.75 0 01.73.977z" />
+              </svg>
             )}
-          </div>
-        )}
-      </main>
+          </button>
+        </header>
 
-      {/* Footer */}
-      <footer className="w-full py-4 text-center text-gray-400 dark:text-gray-500 text-sm bg-transparent">
-        Powered by CoinGecko • Built with React & Tailwind CSS
-      </footer>
+        {/* Main Content */}
+        <main className="flex-1 flex flex-col items-center justify-center px-2 py-8">
+          {/* Ticker Buttons */}
+          <div className="flex flex-wrap justify-center gap-3 mb-6 w-full max-w-lg">
+            {COINS.map((coin) => (
+              <button
+                key={coin.symbol}
+                onClick={() => handleCoinClick(coin)}
+                className={`px-4 py-2 rounded-lg font-bold border transition-colors duration-150 text-sm md:text-base shadow-sm ${
+                  selectedCoin.symbol === coin.symbol
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
+                }`}
+              >
+                {coin.symbol}
+              </button>
+            ))}
+          </div>
+
+          {/* Interval Buttons */}
+          <div className="flex justify-center gap-2 mb-6 flex-wrap w-full max-w-lg">
+            {TIMEFRAMES.map((tf) => (
+              <button
+                key={tf.label}
+                onClick={() => handleTimeframeChange(tf)}
+                className={`px-3 py-1 rounded-full text-sm font-semibold border transition-colors duration-150 ${
+                  selectedTimeframe.label === tf.label
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
+                }`}
+              >
+                {tf.label}
+              </button>
+            ))}
+          </div>
+
+          {error && (
+            <div className="p-4 mb-4 text-red-100 bg-red-900/60 rounded-lg text-center font-semibold max-w-lg w-full">
+              {error}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+            </div>
+          ) : cryptoData && (
+            <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 flex flex-col items-center w-full max-w-lg border border-white/20">
+              <h2 className="text-2xl font-bold text-white mb-2 tracking-wide">{cryptoData.symbol.toUpperCase()}</h2>
+              <p className="text-4xl font-extrabold text-white mb-2">${cryptoData.market_data.current_price.usd.toLocaleString()}</p>
+              <p className={`text-lg font-semibold mb-4 ${cryptoData.market_data.price_change_percentage_24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                24h Change: {cryptoData.market_data.price_change_percentage_24h.toFixed(2)}%
+              </p>
+              {prices.length > 0 && (
+                <div className="w-full h-32">
+                  <Sparklines data={prices} width={400} height={100} margin={5}>
+                    <SparklinesLine color="#60A5FA" style={{ fill: 'none' }} />
+                  </Sparklines>
+                </div>
+              )}
+            </div>
+          )}
+        </main>
+
+        {/* Footer */}
+        <footer className="w-full py-4 text-center text-white/60 text-sm bg-transparent">
+          Powered by CoinGecko • Built with React & Tailwind CSS
+        </footer>
+      </div>
     </div>
   )
 }
