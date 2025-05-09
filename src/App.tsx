@@ -35,7 +35,6 @@ interface CryptoData {
 }
 
 function App() {
-  const [symbol, setSymbol] = useState('')
   const [cryptoData, setCryptoData] = useState<CryptoData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -45,7 +44,6 @@ function App() {
   const [selectedCoin, setSelectedCoin] = useState(COINS[0])
 
   useEffect(() => {
-    // Set dark mode class on mount and when toggled
     if (darkMode) {
       document.documentElement.classList.add('dark')
     } else {
@@ -70,22 +68,15 @@ function App() {
       let priceArr = chartRes.data.prices.map((p: number[]) => p[1])
       if (priceArr.length > timeframe.value.points) {
         const step = Math.floor(priceArr.length / timeframe.value.points)
-        priceArr = priceArr.filter((_:unknown, i: number) => i % step === 0)
+        priceArr = priceArr.filter((_: unknown, i: number) => i % step === 0)
       }
       setPrices(priceArr)
     } catch (err) {
-      setError('Failed to fetch cryptocurrency data. Please check the symbol and try again.')
+      setError('Failed to fetch cryptocurrency data. Please try again later.')
       setCryptoData(null)
       setPrices([])
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (symbol.trim()) {
-      setSelectedCoin({ symbol: symbol.trim().toUpperCase(), id: symbol.trim().toLowerCase() })
     }
   }
 
@@ -95,7 +86,6 @@ function App() {
 
   const handleCoinClick = (coin: typeof COINS[0]) => {
     setSelectedCoin(coin)
-    setSymbol('')
   }
 
   const toggleDarkMode = () => setDarkMode((prev) => !prev)
@@ -124,6 +114,7 @@ function App() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-center px-2 py-8">
+        {/* Ticker Buttons */}
         <div className="flex flex-wrap justify-center gap-3 mb-6 w-full max-w-lg">
           {COINS.map((coin) => (
             <button
@@ -135,23 +126,8 @@ function App() {
             </button>
           ))}
         </div>
-        <form onSubmit={handleSubmit} className="flex gap-2 w-full max-w-lg mb-6">
-          <input
-            type="text"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value)}
-            placeholder="Or enter another symbol (e.g., LTC, MATIC)"
-            className="flex-1 px-4 py-3 rounded-l-xl border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-lg text-gray-900 dark:text-white shadow"
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-6 py-3 bg-blue-600 text-white rounded-r-xl font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 shadow"
-          >
-            {loading ? 'Loading...' : 'Track'}
-          </button>
-        </form>
-        <div className="flex justify-center gap-2 mb-6 flex-wrap">
+        {/* Interval Buttons */}
+        <div className="flex justify-center gap-2 mb-6 flex-wrap w-full max-w-lg">
           {TIMEFRAMES.map((tf) => (
             <button
               key={tf.label}
